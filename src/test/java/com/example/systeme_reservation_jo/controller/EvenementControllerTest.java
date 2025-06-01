@@ -6,6 +6,7 @@ import com.example.systeme_reservation_jo.service.EvenementService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.doNothing;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 @SpringBootTest(classes = SystemeReservationJoApplication.class)
@@ -37,12 +39,15 @@ public class EvenementControllerTest {
     @MockBean
     private EvenementService evenementService;
 
+    // Méthode utilitaire permettant d'instancier un Evenement actif
     private Evenement createValidEvenement() {
-        return new Evenement(1L, "Nom Evenement", "Description", LocalDateTime.now().plusDays(1), "Lieu", 100, 90, "Sport", BigDecimal.TEN);
+        // Paramètres : id, titre, description, dateEvenement, lieu, capaciteTotale, placesRestantes, categorie, prix, actif
+        return new Evenement(1L, "Nom Evenement", "Description",
+                LocalDateTime.now().plusDays(1), "Lieu", 100, 90, "Sport", BigDecimal.TEN, true);
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"}) // 🔹 Simulation d’un admin
+    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"})
     void getEvenementById_ExistingId_ReturnsEvenement() throws Exception {
         Long id = 1L;
         Evenement evenement = createValidEvenement();
@@ -51,45 +56,81 @@ public class EvenementControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/evenements/" + id))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
+                // Vérifie que la propriété "titre" vaut "Nom Evenement"
                 .andExpect(MockMvcResultMatchers.jsonPath("$.titre").value("Nom Evenement"));
     }
 
+    // Pour désactiver un événement (au lieu de le supprimer définitivement),
+    // on utilise le mapping PUT /api/evenements/{id}/desactiver
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"}) // 🔹 Simulation d’un admin
-    void deleteEvenement_ExistingId_ReturnsNoContent() throws Exception {
+    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"})
+    void desactiverEvenement_ExistingId_ReturnsUpdatedEvenement() throws Exception {
         Long evenementId = 1L;
-        Mockito.when(evenementService.getEvenementById(evenementId)).thenReturn(Optional.of(createValidEvenement()));
-        Mockito.doNothing().when(evenementService).deleteEvenement(evenementId);
+        Evenement evenement = createValidEvenement();
+        // Création d'un événement désactivé (actif passe à false)
+        Evenement deactivatedEvenement = new Evenement(
+                evenement.getId(),
+                evenement.getTitre(),
+                evenement.getDescription(),
+                evenement.getDateEvenement(),
+                evenement.getLieu(),
+                evenement.getCapaciteTotale(),
+                evenement.getPlacesRestantes(),
+                evenement.getCategorie(),
+                evenement.getPrix(),
+                false
+        );
+        Mockito.when(evenementService.getEvenementById(evenementId)).thenReturn(Optional.of(evenement));
+        Mockito.when(evenementService.desactiverEvenement(evenementId)).thenReturn(deactivatedEvenement);
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/evenements/" + evenementId))
-                .andExpect(MockMvcResultMatchers.status().isNoContent());
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/evenements/" + evenementId + "/desactiver"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.actif").value(false));
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"}) // 🔹 Simulation d’un admin
-    void deleteEvenement_NonExistingId_ReturnsNotFound() throws Exception {
+    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"})
+    void desactiverEvenement_NonExistingId_ReturnsNotFound() throws Exception {
         Long evenementId = 2L;
         Mockito.when(evenementService.getEvenementById(evenementId)).thenReturn(Optional.empty());
-        Mockito.doNothing().when(evenementService).deleteEvenement(evenementId);
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/evenements/" + evenementId))
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/evenements/" + evenementId + "/desactiver"))
                 .andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"}) // 🔹 Simulation d’un admin
+    @WithMockUser(username = "admin", roles = {"ADMINISTRATEUR"})
     void updateEvenement_ValidEvenement_ReturnsUpdatedEvenement() throws Exception {
         Long id = 1L;
         Evenement existingEvenement = createValidEvenement();
-        Evenement updatedEvenement = new Evenement(1L, "Nom Modifié", "Description", LocalDateTime.now().plusDays(2), "Autre Lieu", 120, 100, "Autre Sport", BigDecimal.valueOf(20));
+        // Création de l'événement mis à jour avec un nouveau titre et des valeurs modifiées.
+        Evenement updatedEvenement = new Evenement(
+                1L,
+                "Nom Modifié",
+                "Description",
+                LocalDateTime.now().plusDays(2),
+                "Autre Lieu",
+                120,
+                100,
+                "Autre Sport",
+                BigDecimal.valueOf(20),
+                true
+        );
         Mockito.when(evenementService.getEvenementById(id)).thenReturn(Optional.of(existingEvenement));
-        Mockito.when(evenementService.updateEvenement(Mockito.eq(id), Mockito.any(Evenement.class))).thenReturn(updatedEvenement);
+        Mockito.when(evenementService.updateEvenement(Mockito.eq(id), Mockito.any(Evenement.class)))
+                .thenReturn(updatedEvenement);
+
+        // Convertir l'objet updatedEvenement en Map et retirer la propriété "evenementId" pour éviter un conflit lors de la désérialisation.
+        Map<String, Object> updatePayload = objectMapper.convertValue(updatedEvenement, Map.class);
+        updatePayload.remove("evenementId");
+        String jsonPayload = objectMapper.writeValueAsString(updatePayload);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/api/evenements/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updatedEvenement)))
+                        .content(jsonPayload))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
+                // Vérifie que la propriété "titre" vaut "Nom Modifié"
                 .andExpect(MockMvcResultMatchers.jsonPath("$.titre").value("Nom Modifié"));
     }
 }

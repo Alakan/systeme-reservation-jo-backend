@@ -45,6 +45,10 @@ public class AuthControllerTest {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    /**
+     * Ce bean de configuration permet de fournir un AuthenticationManager simple basé sur un TestingAuthenticationProvider,
+     * afin que le contexte de sécurité soit correctement configuré pour les tests.
+     */
     @org.springframework.boot.test.context.TestConfiguration
     static class TestConfig {
         @Bean
@@ -53,6 +57,7 @@ public class AuthControllerTest {
         }
     }
 
+    // Méthode utilitaire pour créer une demande d'inscription valide.
     private SignupRequest createValidSignupRequest() {
         return new SignupRequest("testUser", "test@example.com", "password");
     }
@@ -60,7 +65,6 @@ public class AuthControllerTest {
     // ------- Tests pour l'inscription -------
 
     @Test
-    @SuppressWarnings("unchecked")
     void registerUser_ValidSignupRequest_ReturnsOk() throws Exception {
         SignupRequest signupRequest = createValidSignupRequest();
         ResponseEntity<?> expectedResponse =
@@ -74,7 +78,6 @@ public class AuthControllerTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void registerUser_UsernameAlreadyTaken_ReturnsBadRequest() throws Exception {
         SignupRequest signupRequest = createValidSignupRequest();
         ResponseEntity<?> expectedResponse =
@@ -88,7 +91,6 @@ public class AuthControllerTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void registerUser_EmailAlreadyUsed_ReturnsBadRequest() throws Exception {
         SignupRequest signupRequest = createValidSignupRequest();
         ResponseEntity<?> expectedResponse =
@@ -102,7 +104,6 @@ public class AuthControllerTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void registerUser_InvalidEmailFormat_ReturnsBadRequest() throws Exception {
         SignupRequest signupRequest = new SignupRequest("testUser", "invalid-email", "password");
         ResponseEntity<?> expectedResponse =
@@ -116,7 +117,6 @@ public class AuthControllerTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void registerUser_MissingEmail_ReturnsBadRequest() throws Exception {
         SignupRequest signupRequest = new SignupRequest("testUser", null, "password");
         ResponseEntity<?> expectedResponse =
@@ -162,4 +162,5 @@ public class AuthControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isUnauthorized())
                 .andExpect(MockMvcResultMatchers.content().string("Échec de l'authentification : Identifiants incorrects."));
     }
+
 }
