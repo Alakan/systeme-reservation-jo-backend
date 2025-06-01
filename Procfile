@@ -1,0 +1,1 @@
+web: java -Dserver.port=$PORT -jar target/systeme-reservation-jo-0.0.1-SNAPSHOT.jar $JAVA_OPTS

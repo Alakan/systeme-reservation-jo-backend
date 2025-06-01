@@ -1,0 +1,5 @@
+= Documentation API
+
+== Introduction
+
+Ceci est une documentation d'exemple pour votre projet.

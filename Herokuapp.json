@@ -1,0 +1,11 @@
+{
+  "buildpacks": [
+    {
+      "url": "heroku/java"
+    }
+  ],
+  "scripts": {
+    "postinstall": "cd backend/systeme-reservation-jo && mvn clean install"
+  }
+}
+
