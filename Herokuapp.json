@@ -5,7 +5,7 @@
     }
   ],
   "scripts": {
-    "postinstall": "cd backend/systeme-reservation-jo && mvn clean install"
+    "postinstall": "cd backend && mvn clean install"
   }
 }
 
