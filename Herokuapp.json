@@ -3,9 +3,5 @@
     {
       "url": "heroku/java"
     }
-  ],
-  "scripts": {
-    "postinstall": "mvn clean install"
-  }
+  ]
 }
-
